@@ -17,6 +17,8 @@ graph TD
 
 The Mermaid browser runtime is loaded only when a diagram is present. The runtime is served from the installed `mermaid` npm package through NodeBB's plugin static directory, so the forum does not depend on a third-party CDN at render time.
 
+Rendered diagrams can be clicked to open a larger image viewer. The viewer supports mouse wheel zoom, drag-to-pan, background click, close button, and `Esc` dismissal.
+
 ## Compatibility
 
 - NodeBB: `^3.10.0`
@@ -50,4 +52,5 @@ npm audit
 - Converts `pre > code.language-mermaid` and `pre > code.lang-mermaid` blocks into Mermaid render nodes.
 - Keeps Mermaid `securityLevel` at `strict`.
 - Avoids duplicate rendering with `data-nodebb-mermaid-state`.
+- Adds a lightweight image viewer to rendered diagrams without loading extra browser dependencies.
 - Honors NodeBB's `config.relative_path` when loading the local Mermaid asset.

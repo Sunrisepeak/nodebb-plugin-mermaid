@@ -115,6 +115,131 @@ describe('mermaid loader', () => {
 		assert.strictEqual(window.mermaid.config.securityLevel, 'strict');
 	});
 
+	it('opens rendered Mermaid diagrams in a dismissible image viewer', async () => {
+		const { api } = loadLoader(`
+			<div id="content">
+				<pre><code class="language-mermaid">graph TD\nA-->B</code></pre>
+			</div>
+		`);
+		const content = document.getElementById('content');
+
+		window.mermaid = {
+			initialize() {},
+			async run({ nodes }) {
+				nodes.forEach((node) => {
+					node.innerHTML = '<svg viewBox="0 0 100 100"><rect width="100" height="100"></rect></svg>';
+					node.dataset.nodebbMermaidState = 'rendered';
+				});
+			},
+		};
+
+		await api.render(content);
+		content.querySelector('.nodebb-mermaid__diagram').click();
+
+		const viewer = document.querySelector('.nodebb-mermaid-viewer');
+
+		assert(viewer);
+		assert(viewer.querySelector('svg'));
+		assert.strictEqual(viewer.getAttribute('role'), 'dialog');
+		assert.strictEqual(document.body.classList.contains('nodebb-mermaid-viewer-open'), true);
+
+		document.dispatchEvent(new window.KeyboardEvent('keydown', {
+			key: 'Escape',
+			bubbles: true,
+		}));
+
+		assert.strictEqual(document.querySelector('.nodebb-mermaid-viewer'), null);
+		assert.strictEqual(document.body.classList.contains('nodebb-mermaid-viewer-open'), false);
+	});
+
+	it('zooms the Mermaid image viewer around the wheel position', async () => {
+		const { api } = loadLoader(`
+			<div id="content">
+				<pre><code class="language-mermaid">graph TD\nA-->B</code></pre>
+			</div>
+		`);
+		const content = document.getElementById('content');
+
+		window.mermaid = {
+			initialize() {},
+			async run({ nodes }) {
+				nodes.forEach((node) => {
+					node.innerHTML = '<svg viewBox="0 0 100 100"><rect width="100" height="100"></rect></svg>';
+					node.dataset.nodebbMermaidState = 'rendered';
+				});
+			},
+		};
+
+		await api.render(content);
+		content.querySelector('.nodebb-mermaid__diagram').click();
+
+		const surface = document.querySelector('.nodebb-mermaid-viewer__surface');
+		const image = document.querySelector('.nodebb-mermaid-viewer__image');
+		surface.getBoundingClientRect = () => ({
+			left: 0,
+			top: 0,
+			width: 800,
+			height: 600,
+			right: 800,
+			bottom: 600,
+			x: 0,
+			y: 0,
+			toJSON() {},
+		});
+
+		surface.dispatchEvent(new window.WheelEvent('wheel', {
+			deltaY: -100,
+			clientX: 500,
+			clientY: 300,
+			bubbles: true,
+			cancelable: true,
+		}));
+
+		assert.match(image.style.transform, /scale\(1\.1\)/);
+		assert.match(image.style.transform, /translate\(-10px, 0px\)/);
+	});
+
+	it('pans the Mermaid image viewer by dragging the image', async () => {
+		const { api } = loadLoader(`
+			<div id="content">
+				<pre><code class="language-mermaid">graph TD\nA-->B</code></pre>
+			</div>
+		`);
+		const content = document.getElementById('content');
+
+		window.mermaid = {
+			initialize() {},
+			async run({ nodes }) {
+				nodes.forEach((node) => {
+					node.innerHTML = '<svg viewBox="0 0 100 100"><rect width="100" height="100"></rect></svg>';
+					node.dataset.nodebbMermaidState = 'rendered';
+				});
+			},
+		};
+
+		await api.render(content);
+		content.querySelector('.nodebb-mermaid__diagram').click();
+
+		const image = document.querySelector('.nodebb-mermaid-viewer__image');
+		image.dispatchEvent(new window.MouseEvent('mousedown', {
+			clientX: 100,
+			clientY: 100,
+			bubbles: true,
+		}));
+		document.dispatchEvent(new window.MouseEvent('mousemove', {
+			clientX: 130,
+			clientY: 140,
+			bubbles: true,
+		}));
+		document.dispatchEvent(new window.MouseEvent('mouseup', {
+			clientX: 130,
+			clientY: 140,
+			bubbles: true,
+		}));
+
+		assert.match(image.style.transform, /translate\(30px, 40px\)/);
+	});
+
 	it('binds NodeBB ajaxify navigation to render new Mermaid content', async () => {
 		const { api } = loadLoader('<div id="content"></div>');
 		const content = document.getElementById('content');
