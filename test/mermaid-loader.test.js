@@ -115,6 +115,38 @@ describe('mermaid loader', () => {
 		assert.strictEqual(window.mermaid.config.securityLevel, 'strict');
 	});
 
+	it('binds NodeBB ajaxify navigation to render new Mermaid content', async () => {
+		const { api } = loadLoader('<div id="content"></div>');
+		const content = document.getElementById('content');
+		const events = {};
+
+		window.app = {
+			require(moduleName) {
+				assert.strictEqual(moduleName, 'hooks');
+				return Promise.resolve({
+					on(eventName, callback) {
+						events[eventName] = callback;
+					},
+				});
+			},
+		};
+		window.mermaid = {
+			initialize() {},
+			async run({ nodes }) {
+				nodes.forEach((node) => {
+					node.dataset.nodebbMermaidState = 'rendered';
+				});
+			},
+		};
+
+		api.bind();
+		await new Promise(resolve => setTimeout(resolve, 0));
+		content.innerHTML = '<pre><code class="language-mermaid">graph TD\\nA-->B</code></pre>';
+		await events['action:ajaxify.end']();
+
+		assert.strictEqual(content.querySelector('.nodebb-mermaid__diagram').dataset.nodebbMermaidState, 'rendered');
+	});
+
 	it('renders a basic diagram with the pinned Mermaid runtime', async () => {
 		const { api } = loadLoader(`
 			<div id="content">
