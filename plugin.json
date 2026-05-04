@@ -1,0 +1,14 @@
+{
+	"id": "nodebb-plugin-mermaid",
+	"url": "https://github.com/Sunrisepeak/nodebb-plugin-mermaid",
+	"library": "./library.js",
+	"staticDirs": {
+		"mermaid": "./node_modules/mermaid/dist"
+	},
+	"scss": [
+		"scss/mermaid.scss"
+	],
+	"scripts": [
+		"static/mermaid-loader.js"
+	]
+}

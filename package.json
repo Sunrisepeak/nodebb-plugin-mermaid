@@ -1,0 +1,45 @@
+{
+  "name": "nodebb-plugin-mermaid",
+  "version": "0.0.1",
+  "description": "Lazy Mermaid diagram rendering for NodeBB posts",
+  "main": "library.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Sunrisepeak/nodebb-plugin-mermaid"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "test": "node --test"
+  },
+  "keywords": [
+    "nodebb",
+    "plugin",
+    "mermaid",
+    "diagram"
+  ],
+  "files": [
+    "library.js",
+    "plugin.json",
+    "scss",
+    "static"
+  ],
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/Sunrisepeak/nodebb-plugin-mermaid/issues"
+  },
+  "readmeFilename": "README.md",
+  "nbbpm": {
+    "compatibility": "^3.10.0"
+  },
+  "dependencies": {
+    "mermaid": "^11.14.0"
+  },
+  "overrides": {
+    "uuid": "^14.0.0"
+  },
+  "devDependencies": {
+    "eslint": "9.30.0",
+    "eslint-config-nodebb": "1.1.8",
+    "jsdom": "27.2.0"
+  }
+}

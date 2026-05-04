@@ -1,0 +1,21 @@
+.nodebb-mermaid {
+	margin: 1rem 0;
+	overflow-x: auto;
+	text-align: center;
+}
+
+.nodebb-mermaid svg {
+	display: block;
+	height: auto;
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+.nodebb-mermaid[data-nodebb-mermaid-state="error"] {
+	padding: 0.75rem;
+	border: 1px solid var(--bs-danger-border-subtle, #f1aeb5);
+	border-radius: 4px;
+	color: var(--bs-danger-text-emphasis, #842029);
+	text-align: left;
+	white-space: pre-wrap;
+}
