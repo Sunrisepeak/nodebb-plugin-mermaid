@@ -152,6 +152,38 @@ describe('mermaid loader', () => {
 		assert.strictEqual(document.body.classList.contains('nodebb-mermaid-viewer-open'), false);
 	});
 
+	it('normalizes responsive Mermaid SVG dimensions in the image viewer', async () => {
+		const { api } = loadLoader(`
+			<div id="content">
+				<pre><code class="language-mermaid">graph TD\nA-->B</code></pre>
+			</div>
+		`);
+		const content = document.getElementById('content');
+
+		window.mermaid = {
+			initialize() {},
+			async run({ nodes }) {
+				nodes.forEach((node) => {
+					node.innerHTML = [
+						'<svg width="100%" style="max-width: 640px;" viewBox="0 0 640 320">',
+						'<rect width="640" height="320"></rect>',
+						'</svg>',
+					].join('');
+					node.dataset.nodebbMermaidState = 'rendered';
+				});
+			},
+		};
+
+		await api.render(content);
+		content.querySelector('.nodebb-mermaid__diagram').click();
+
+		const viewerSvg = document.querySelector('.nodebb-mermaid-viewer svg');
+
+		assert.strictEqual(viewerSvg.getAttribute('width'), '640');
+		assert.strictEqual(viewerSvg.getAttribute('height'), '320');
+		assert.strictEqual(viewerSvg.style.maxWidth, '');
+	});
+
 	it('zooms the Mermaid image viewer around the wheel position', async () => {
 		const { api } = loadLoader(`
 			<div id="content">
@@ -175,6 +207,7 @@ describe('mermaid loader', () => {
 
 		const surface = document.querySelector('.nodebb-mermaid-viewer__surface');
 		const image = document.querySelector('.nodebb-mermaid-viewer__image');
+		const viewerSvg = document.querySelector('.nodebb-mermaid-viewer svg');
 		surface.getBoundingClientRect = () => ({
 			left: 0,
 			top: 0,
@@ -195,8 +228,10 @@ describe('mermaid loader', () => {
 			cancelable: true,
 		}));
 
-		assert.match(image.style.transform, /scale\(1\.1\)/);
+		assert.doesNotMatch(image.style.transform, /scale/);
 		assert.match(image.style.transform, /translate\(-10px, 0px\)/);
+		assert.strictEqual(viewerSvg.style.width, '110px');
+		assert.strictEqual(viewerSvg.style.height, '110px');
 	});
 
 	it('pans the Mermaid image viewer by dragging the image', async () => {

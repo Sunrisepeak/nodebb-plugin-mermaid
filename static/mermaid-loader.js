@@ -22,6 +22,8 @@
 	const minViewerScale = 0.2;
 	const maxViewerScale = 8;
 	const viewerZoomStep = 1.1;
+	const viewerMaxWidthRatio = 0.9;
+	const viewerMaxHeightRatio = 0.86;
 	const codeSelector = [
 		'pre > code.language-mermaid',
 		'pre > code.lang-mermaid',
@@ -67,6 +69,88 @@
 
 	function formatNumber(value) {
 		return Number.parseFloat(value.toFixed(3)).toString();
+	}
+
+	function parseSvgLength(value) {
+		if (!value || value.includes('%')) {
+			return undefined;
+		}
+
+		const match = value.trim().match(/^([0-9]+(?:\.[0-9]+)?)(?:px)?$/);
+		if (!match) {
+			return undefined;
+		}
+
+		const parsed = Number.parseFloat(match[1]);
+		return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+	}
+
+	function getSvgViewBoxSize(svg) {
+		const viewBox = svg.getAttribute('viewBox');
+		if (!viewBox) {
+			return undefined;
+		}
+
+		const values = viewBox.trim().split(/[\s,]+/).map(Number);
+		if (values.length !== 4 || values.some(value => !Number.isFinite(value))) {
+			return undefined;
+		}
+
+		const [, , width, height] = values;
+		if (width <= 0 || height <= 0) {
+			return undefined;
+		}
+
+		return { width, height };
+	}
+
+	function getSvgRenderedSize(svg) {
+		const rect = svg.getBoundingClientRect?.();
+		if (!rect || rect.width <= 0 || rect.height <= 0) {
+			return undefined;
+		}
+
+		return {
+			width: rect.width,
+			height: rect.height,
+		};
+	}
+
+	function getSvgAttributeSize(svg) {
+		const width = parseSvgLength(svg.getAttribute('width'));
+		const height = parseSvgLength(svg.getAttribute('height'));
+		if (!width || !height) {
+			return undefined;
+		}
+
+		return { width, height };
+	}
+
+	function getViewerSvgSize(svg) {
+		return getSvgViewBoxSize(svg) || getSvgRenderedSize(svg) || getSvgAttributeSize(svg);
+	}
+
+	function getViewportSize(doc) {
+		const view = doc.defaultView || root;
+
+		return {
+			width: view.innerWidth || doc.documentElement?.clientWidth || 1024,
+			height: view.innerHeight || doc.documentElement?.clientHeight || 768,
+		};
+	}
+
+	function fitViewerSvgSize(size, doc) {
+		const viewport = getViewportSize(doc);
+		const fitRatio = Math.min(
+			1,
+			(viewport.width * viewerMaxWidthRatio) / size.width,
+			(viewport.height * viewerMaxHeightRatio) / size.height
+		);
+
+		return {
+			width: size.width * fitRatio,
+			height: size.height * fitRatio,
+		};
 	}
 
 	function findMermaidSources(container) {
@@ -163,10 +247,12 @@
 	}
 
 	function applyViewerTransform(viewer) {
-		viewer.image.style.transform = [
-			`translate(${formatNumber(viewer.translateX)}px, ${formatNumber(viewer.translateY)}px)`,
-			`scale(${formatNumber(viewer.scale)})`,
-		].join(' ');
+		viewer.image.style.transform = `translate(${formatNumber(viewer.translateX)}px, ${formatNumber(viewer.translateY)}px)`;
+
+		if (viewer.baseWidth && viewer.baseHeight) {
+			viewer.svg.style.width = `${formatNumber(viewer.baseWidth * viewer.scale)}px`;
+			viewer.svg.style.height = `${formatNumber(viewer.baseHeight * viewer.scale)}px`;
+		}
 	}
 
 	function addViewerListener(viewer, target, eventName, handler, options) {
@@ -253,6 +339,27 @@
 		viewer.image.classList.remove('nodebb-mermaid-viewer__image--dragging');
 	}
 
+	function cloneSvgForViewer(svg) {
+		const clone = svg.cloneNode(true);
+		const size = getViewerSvgSize(svg);
+
+		if (size) {
+			clone.setAttribute('width', formatNumber(size.width));
+			clone.setAttribute('height', formatNumber(size.height));
+		}
+
+		clone.style.maxWidth = '';
+		clone.style.maxHeight = '';
+		clone.style.width = '';
+		clone.style.height = '';
+
+		if (!clone.getAttribute('style')) {
+			clone.removeAttribute('style');
+		}
+
+		return clone;
+	}
+
 	function createViewer(svg) {
 		const doc = svg.ownerDocument || getDocument();
 		if (!doc?.body) {
@@ -268,9 +375,12 @@
 		const surface = doc.createElement('div');
 		surface.className = 'nodebb-mermaid-viewer__surface';
 
+		const viewerSvg = cloneSvgForViewer(svg);
+		const naturalSize = getViewerSvgSize(svg);
+		const baseSize = naturalSize ? fitViewerSvgSize(naturalSize, doc) : undefined;
 		const image = doc.createElement('div');
 		image.className = 'nodebb-mermaid-viewer__image';
-		image.appendChild(svg.cloneNode(true));
+		image.appendChild(viewerSvg);
 
 		const closeButton = doc.createElement('button');
 		closeButton.type = 'button';
@@ -290,6 +400,9 @@
 			previousFocus: doc.activeElement,
 			scale: 1,
 			surface,
+			svg: viewerSvg,
+			baseWidth: baseSize?.width,
+			baseHeight: baseSize?.height,
 			translateX: 0,
 			translateY: 0,
 		};
